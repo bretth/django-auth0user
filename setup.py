@@ -43,7 +43,7 @@ history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 setup(
     name='django-auth0user',
     version=version,
-    description="""A Django User Model that backed by Auth0 and allows per-site users and permissions""",
+    description="""An Django abstract User Model backed by Auth0 that allows per-site users and permissions""",
     long_description=readme + '\n\n' + history,
     author='Brett Haydon',
     author_email='brett@haydon.id.au',

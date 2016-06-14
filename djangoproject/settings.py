@@ -19,10 +19,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
 AUTH0_CONNECTION = os.getenv('AUTH0_CONNECTION')
 AUTH0_JWT = os.getenv('AUTH0_JWT')
+# ADMIN_SITE_NAME = 'admin'  # default
+# ADMIN_SITE_PATH = 'admin'  # default
 
-AUTH_USER_MODEL = 'example_app.User'
+AUTH_USER_MODEL = 'siteuser.User'
 SILENCED_SYSTEM_CHECKS = ['auth.E003']
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
@@ -39,7 +42,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+
     'auth0user',  # added
+    'djangoproject',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,8 +52,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',  # added
 
-    'django.contrib.sites',
-    'tests.example_app',
+    'django.contrib.sites',  # added
+    'tests.siteuser',
+
 
 ]
 
@@ -60,6 +66,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.contrib.sites.middleware.CurrentSiteMiddleware',
+    'auth0user.middleware.auth0user_middleware',
 ]
 
 ROOT_URLCONF = 'djangoproject.urls'

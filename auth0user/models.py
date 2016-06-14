@@ -10,10 +10,11 @@ from django.contrib.sites.models import Site
 from django.contrib.sites.managers import CurrentSiteManager
 from django.core.mail import send_mail
 from django.contrib.auth import password_validation
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.hashers import (
     check_password, is_password_usable, make_password,
 )
-from django.contrib.auth.models import BaseUserManager
+from django.contrib.auth.models import BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
@@ -22,6 +23,8 @@ from django.utils.translation import ugettext_lazy as _
 from model_utils.fields import AutoCreatedField, AutoLastModifiedField
 
 logger = logging.getLogger(__name__)
+
+CACHE_PROFILE_DEFAULT = 60
 
 
 class Profile(object):
@@ -59,8 +62,10 @@ class Profile(object):
         if not auth0user:
             try:
                 auth0user = cls._Auth0User.get(auth0_id)
-                cache.set(key, auth0user, settings.AUTH0_PROFILE_CACHE)
-            except (cls.objects.DoesNotExist, Auth0Error):
+                cache.set(
+                    key, auth0user,
+                    getattr(settings, 'AUTH0_PROFILE_CACHE', CACHE_PROFILE_DEFAULT))
+            except (cls._Auth0User.DoesNotExist, Auth0Error):
                 logger.error("UserProfile Could not get auth0 user", exc_info=True)
                 auth0user = None
 
@@ -100,7 +105,7 @@ class Profile(object):
             cache.set(
                 self._get_cache_key(self._auth0user.user_id),
                 self._auth0user,
-                settings.AUTH0_PROFILE_CACHE)
+                getattr(settings, 'AUTH0_PROFILE_CACHE', CACHE_PROFILE_DEFAULT))
             self._auth0user.save()
 
 
@@ -172,20 +177,19 @@ class SiteUserManager(BaseUserManager):
 
     def get_by_natural_key(self, auth0_id, site_id=settings.SITE_ID):
         """
-        Overrides BaseUserManager to add site_id
+        Overrides BaseUserManager to add site_id and use auth0_id
         """
-        return self.get(**{self.model.USERNAME_FIELD: auth0_id, 'site_id': site_id})
+        return self.get(auth0_id=auth0_id, site_id=site_id)
 
 
-class SiteUser(models.Model):
+class SiteUser(AbstractBaseUser, PermissionsMixin):
 
     """
     Replacement user model for standard Django User which uses auth0 and sites.
     """
 
-    auth0_id = models.CharField(_('auth0 user id'), max_length=36, editable=False)
-    email = models.EmailField(_('email address'), max_length=150, editable=False)
-    password = models.CharField(_('password'), max_length=128)
+    auth0_id = models.CharField(_('auth0 user id'), db_index=True, max_length=36, editable=False)
+    email = models.EmailField(_('email address'), db_index=True, max_length=150, editable=False)
     
     is_staff = models.BooleanField(
         _('staff status'),
@@ -219,16 +223,12 @@ class SiteUser(models.Model):
         verbose_name_plural = _('site users')
 
     # Modified from django.contrib.auth.base_models #
-    def get_username(self):
-        "Return the identifying username for this User"
-        return getattr(self, self.USERNAME_FIELD)
 
     def __init__(self, *args, **kwargs):
         super(SiteUser, self).__init__(*args, **kwargs)
         # Stores the raw password if set_password() is called so that it can
         # be passed to password_changed() after the model is saved.
         self._password = None
-        self._save_profile = False
 
     def __str__(self):
         return self.get_username()
@@ -236,60 +236,13 @@ class SiteUser(models.Model):
     def save(self, *args, **kwargs):
         self.profile.save()
         super(SiteUser, self).save(*args, **kwargs)
-        if self._password is not None:
-            password_validation.password_changed(self._password, self)
-            self._password = None
 
     def natural_key(self):  # also includes site_id
         return (self.get_username(), self.site_id)
 
-    @property
-    def is_anonymous(self):
-        """
-        Always return False. This is a way of comparing User objects to
-        anonymous users.
-        """
-        return False
-
-    @property
-    def is_authenticated(self):
-        """
-        Always return True. This is a way to tell if the user has been
-        authenticated in templates.
-        """
-        return True
-
     def set_password(self, raw_password):
-        self.password = make_password(raw_password)
-        self._password = raw_password
         self.profile.password = raw_password
-
-    def check_password(self, raw_password):
-        """
-        Return a boolean of whether the raw_password was correct. Handles
-        hashing formats behind the scenes.
-        """
-        def setter(raw_password):
-            self.set_password(raw_password)
-            # Password hash upgrades shouldn't be considered password changes.
-            self._password = None
-            self.save(update_fields=["password"])
-        return check_password(raw_password, self.password, setter)
-
-    def set_unusable_password(self):
-        # Set a value that will never be a valid hash
-        self.password = make_password(None)
-
-    def has_usable_password(self):
-        return is_password_usable(self.password)
-
-    def get_session_auth_hash(self):
-        """
-        Return an HMAC of the password field.
-        """
-        key_salt = "django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
-        return salted_hmac(key_salt, self.password).hexdigest()
-    # End section modified from django.contrib.auth.base_models #
+        super(SiteUser, self).set_password(raw_password)
 
     @property
     def first_name(self):
