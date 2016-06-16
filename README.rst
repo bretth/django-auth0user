@@ -15,9 +15,9 @@ Overview
 
 The Django auth model backend is of a time when django projects where more monolithic in nature and not complimentary to native apps. The backend is tightly coupled to the project which makes it awkward to use as an authentication source for other projects or platforms. Additionally the user permissions are tied to the user which makes them global across multi-site setups which may not be desirable. 
 
-Although Django makes it possible to do our own backend and permissions, this project aims to retain the auth model backend but loosely couple the user to your Django project, leveraging Auth0 as the authentication and identity store, while allowing for site specific permissions and user preferences. It does this through a custom abstract model which adds a site attribute to the user and makes the username unique *per-site*, while linking to a global auth0 user.
+Although Django makes it possible to do our own backend and permissions, this project aims to retain the auth model backend but loosely couple the user to your Django project, leveraging Auth0 as the authentication and identity store, while allowing for site specific permissions and user preferences. It does this through a custom abstract model which adds a site attribute to the user and makes the username unique *per-site*, while linking to a unique auth0 user.
 
-The main caveats are that to maintain compatibility and functionality for offline development and testing, email and password can *also* be stored locally as per the traditional user model - but it is intended that Auth0 be the master data for all global user attributes. 
+The main caveats are that to maintain compatibility and functionality for offline development and testing, email and password can *also* be stored locally as per the traditional user model - but it is intended that Auth0 be the master data for all user attributes that are global across sites. 
 
 Also to maintain compatibility, unless you expressly specify a site id, the default `settings.SITE_ID` is always assumed when querying or creating users.
 
