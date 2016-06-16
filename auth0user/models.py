@@ -4,20 +4,16 @@ import logging
 
 from auth0plus.exceptions import Auth0Error
 from auth0plus.management import Auth0
+
 from django.core.cache import cache
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.contrib.sites.managers import CurrentSiteManager
 from django.core.mail import send_mail
-from django.contrib.auth import password_validation
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.hashers import (
-    check_password, is_password_usable, make_password,
-)
 from django.contrib.auth.models import BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
-from django.utils.crypto import salted_hmac
 from django.utils.translation import ugettext_lazy as _
 
 from model_utils.fields import AutoCreatedField, AutoLastModifiedField

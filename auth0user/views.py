@@ -1,5 +1,7 @@
 import json
+
 import requests
+
 from django.conf import settings
 from django.contrib.auth import _get_backends, get_user_model, login
 from django.contrib.auth.views import redirect_to_login
