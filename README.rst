@@ -13,19 +13,15 @@ An Django abstract User Model backed by Auth0 that allows per-site users and per
 Overview
 --------
 
-This abstract Django model allows for a non-unique email-username User model. Sounds crazy right. Let me demonstrate why that's useful. 
+The Django auth model backend is of a time when django projects where more monolithic in nature and not complimentary to native apps. The backend is tightly coupled to the project which makes it awkward to use as an authentication source for other projects or platforms. Additionally the user permissions are tied to the user which makes them global across multi-site setups which may not be desirable. 
 
-Local users are unique *per-site* (using the django sites framework) so this allows users to be added to multiple sites, have separate permissions (and potentially site preferences), and use a unique Auth0 account to authenticate against. Traditionally the user profile would be kept in a separate model. In this case the user profile is kept on Auth0 and just cached and proxied locally. When implementing the custom User model it may be extended to allow for site specific user preferences.
+Although Django makes it possible to do our own backend and permissions, this project aims to retain the auth model backend but loosely couple the user to your Django project, leveraging Auth0 as the authentication and identity store, while allowing for site specific permissions and user preferences. It does this through a custom abstract model which adds a site attribute to the user and makes the username unique *per-site*, while linking to a global auth0 user.
 
-The main caveats are that to maintain compatibility and functionality for offline development and testing, email and password are *also* stored locally as per the traditional user model. 
-
-When developing your application the auth0 profile should always be treated as the master data. It **is** feasible (and desirable) that a change could be made to the auth0 account or backend account that your app knows nothing about, so where possible your app should treat the Auth0 email address as the authoratitive address and just sync on login or have a workflow for email change. The same applies to passwords. If the auth0 password is updated without the app's knowledge there is no way to get that updated password - so really the local passwords are just for the benefit of development not as a production alternative for auth0. 
+The main caveats are that to maintain compatibility and functionality for offline development and testing, email and password can *also* be stored locally as per the traditional user model - but it is intended that Auth0 be the master data for all global user attributes. 
 
 Also to maintain compatibility, unless you expressly specify a site id, the default `settings.SITE_ID` is always assumed when querying or creating users.
 
-Finally, The user model `first_name` and `last_name` attributes are kept for backward compatibility but are actually now just a proxy for the network auth0 profile `given_name` and `family_name`. 
-
-It makes sense now right! Local site profiles and permissions with the user's actual account handled by Auth0, or whatever Auth0 backend you want (Github, Microsoft, Google, Facebook etc).
+Finally, The user model *first_name* and *last_name* attributes are kept for backward compatibility but are actually now just a proxy for the auth0 stored profile *given_name* and *family_name*. 
 
 
 Installation
@@ -33,9 +29,9 @@ Installation
 
 Install django-auth0user::
 
-    pip install django-auth0user
+    pip install git+https://github.com/bretth/django-auth0user#egg=auth0user
 
-Add auth0user ahead of *django.contrib.auth* in your INSTALLED_APPS, and create an app that will hold your custom user model. You'll also need to add the django sites app::
+Add *auth0user* ahead of *django.contrib.auth* in your INSTALLED_APPS, and create an app that will hold your custom user model. You'll also need to add the django sites app::
 
     # settings.py 
 
@@ -53,7 +49,7 @@ Add auth0user ahead of *django.contrib.auth* in your INSTALLED_APPS, and create 
 
     SITE_ID = 1
 
-What that gives you is a replacement `createsuperuser` management command and an admin auth0 login template from auth0user if you are using app template discovery. 
+What that gives you is a replacement *createsuperuser* management command and an admin auth0 login template from auth0user if you are using app template discovery. 
 
 Add sites and auth0user middleware::
 
@@ -79,7 +75,7 @@ You'll need your Auth0 secrets and a custom user model::
 
     AUTH_USER_MODEL = 'siteuser.User'  # Your custom user model
 
-Finally create the app with your own custom User model that inherits the auth0user abstract SiteUser and sprinkle your magic site specific profile attributes on it::
+Finally create the app with your custom User model that inherits the auth0user abstract SiteUser and sprinkle your magic site specific profile attributes on it::
     
     # models.py in djangoproject/apps/siteuser example
 
@@ -94,7 +90,7 @@ Because it is a custom user model Django requires you make the migration first b
     ./manage.py makemigrations siteuser
     ./manage.py migrate
 
-Create your superuser (creates or re-uses an existing Auth0 user):
+Create your superuser (creates or re-uses an existing Auth0 user)::
 
     ./manage.py createsuperuser
 
